@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Rashi - Your own cryptocurrency</title>
+
+    <!-- Bootstrap Css files -->
+    <!-- Latest compiled and minified CSS -->
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+   
+    <style>
+        body{
+            padding-top: 70px;
+        }
+        #node-addresses{
+            height: 100px;
+            overflow-y: scroll;
+        }
+        .loader {
+          border: 6px solid #f3f3f3; /* Light grey */
+          border-top: 6px solid #3498db; /* Blue */
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="/">Rashi <small> - Your Own Cryptocurrency</small></a>
+            </div>
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/admin">Presentation</a></li>
+                <li><a href="/docs">Docs</a></li>
+                <li><a href="/nodes/resolve">Sync</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="row">
+
+            <button id="mine" class="btn btn-warning">Mine</button>
+            <br><br>
+            <div class="loader"></div>
+
+            <!-- List Chain Status -->
+            <hr>
+            <hr>
+            <p>
+            <h4>Chain :</h4>
+            <ul>
+            {% for block in blockchain.chain %}
+                <div class="panel-group">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a data-toggle="collapse" href="#collapse{{block.index}}">Block {{block.index}}</a>
+                            </h4>
+                        </div>
+                        <div id="collapse{{block.index}}" class="panel-collapse collapse">
+                            <div class="panel-body">
+                                <ul>
+                                    <li><b>Index : </b>{{ block.index }}</li>
+                                    <li><b>Timestamp : </b>{{ block.timestamp }}</li>
+                                    <li><b>Previous Block Hash : </b>{{ block.previous_hash }}</li>
+                                    <li><b>Nounce : </b>{{ block.proof }}</li>
+                                    <li>Transactions : </li>
+                                    {% for transaction in block.transactions %}
+                                        <div class="panel-group">
+                                            <div class="panel panel-default">
+                                                <div class="panel-heading">
+                                                    <h4 class="panel-title">
+                                                        <a data-toggle="collapse" href="#transaction{{loop.index}}">Transaction {{loop.index}}</a>
+                                                    </h4>
+                                                </div>
+                                                <div id="transaction{{loop.index}}" class="panel-collapse collapse">
+                                                    <div class="panel-body">
+                                                        <ul>
+                                                            <li> <b>Sender</b> : {{transaction.sender}}</li>
+                                                            <li> <b>Reciever</b> : {{transaction.reciever}}</li>
+                                                            <li> <b>Rashi(s)</b> : {{transaction.amount}}</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            </ul>
+        </p>
+        <hr>
+        <hr>
+            <div class="col-md-6">
+                <form>
+                    <div class="form-group">
+                        <label for="node-address">Node address:</label>
+                        <textarea id="add-nodes-input" class="span6 form-control" rows="3" placeholder="Enter other node address in the network" required></textarea>
+
+                    </div>
+                    <button id="add-nodes" class="btn btn-success">Add Nodes</button>
+                </form>
+            </div>
+            <div class="col-md-6">
+                <h3>Nodes in Network : </h3>
+                <ul>
+                    <div id="node-addresses" style="">
+                        {% for node in blockchain.nodes %}
+                            <li>{{ node }}</li>
+                        {% endfor %}
+                    </div>
+                </ul>
+            </div>
+        </div>
+        <!-- // row -->
+        <hr>
+        <hr>
+        <!-- Making Transactions -->
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <form>
+                    <div class="form-group">
+                        <label for="sender-address" >Sender address:</label>
+                        <input type="text" class="form-control" id="sender-address"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="reciever-address" >Reciever address:</label>
+                        <input type="text" class="form-control" id="reciever-address"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="rashi" >Rashi:</label>
+                        <input type="number" class="form-control" id="rashi"/>
+                    </div>
+                    <button id="make-transaction" class="btn btn-success">Make Transaction</button>
+                </form>
+            </div>
+        </div>
+        <!-- // row -->
+
+        <hr>
+        <hr>
+        
+    </div>
+
+    <!-- calling blockchain APIs -->
+    <script>
+        $(document).ready(function() {
+            $(".loader").hide();
+
+            $("#add-nodes").click(function(e) {
+                e.preventDefault();
+                nodes_dict = {
+                    "nodes": $("#add-nodes-input").val().split("\n"),
+                }
+                console.log(nodes_dict);
+                $.ajax({
+                    type: "POST",
+                    url: "/nodes/register",
+                    // data: {
+                    //     // nodes: $("add-nodes-input").val(),
+                    //     nodes: "mohit",
+                    // },
+                    data: JSON.stringify(nodes_dict),
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    success: function(result) {
+                        alert('ok');
+                        console.log(result);
+                    },
+                    error: function(result) {
+                        alert('error');
+                        console.log(result);
+                    }
+                });
+            });
+
+            // mining due transaction
+            $("#mine").click(function(e) {
+                e.preventDefault();
+                $(".loader").show();
+                $.ajax({
+                    type: "GET",
+                    url: "/mine",
+                    success: function(result) {
+                        alert('block mined');
+                        console.log(result);
+                        $(".loader").hide();
+
+                    },
+                    error: function(result) {
+                        alert('error');
+                        alert(result.msg);
+                    }
+                });
+            });
+
+
+            // marking new transaction
+            $("#make-transaction").click(function(e) {
+                e.preventDefault();
+                var transaction_dict= {
+                    'sender': $("#sender-address").val(),
+                    'reciever': $("#reciever-address").val(),
+                    'amount': $("#rashi").val(),
+                };
+                console.log($("#rashi").val());
+                $.ajax({
+                    type: "POST",
+                    url: "/transactions/new",
+                    data: JSON.stringify(transaction_dict),
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    success: function(result) {
+                        alert('Transaction Pending (Waiting for mining)');
+                        console.log(result);
+                    },
+                    error: function(result) {
+                        alert('error');
+                        console.log(result);
+                    }
+                });
+            });
+
+        });
+
+</script>
+   
+</body>
+</html>
